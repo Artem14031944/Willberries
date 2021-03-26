@@ -14,8 +14,145 @@ const buttonCart = document.querySelector('.button-cart');
 const modalCart = document.querySelector('#modal-cart');
 const modalClose = document.querySelector('.modal-close');
 const modal = document.querySelector('#modal-cart');
+const viewAll = document.querySelectorAll('.view-all');
+const navigationLink = document.querySelectorAll('.navigation-link:not(.view-all)');
+const longGoodsList = document.querySelector('.long-goods-list');
+const showClothing = document.querySelectorAll('.show-clothing');
+const showAccessories = document.querySelectorAll('.show-accessories');
+const cartTableGoods = document.querySelector('.cart-table__goods');
+const cardTableTotal = document.querySelector('.card-table__total');
+const cartCount = document.querySelector('.cart-count');
+const cartClear = document.querySelector('.cart-clear');
+
+
+const getGoods = async () => {
+	const result = await fetch('db/db.json');
+if(!result.ok) {
+	throw `Ошибка: ${result.status}`
+}
+return await result.json();
+};
+
+
+
+const cart = {
+	cartGoods: [],
+	countQuantity(){
+		cartCount.textContent = this.cartGoods.reduce((sum, item)=> {
+			return sum + item.count
+		},0)
+	},
+	renderCart(){
+		cartTableGoods.textContent = '';
+		this.cartGoods.forEach(({id, name, price, count,}) => {
+			const trGood = document.createElement('tr');
+			trGood.className = 'cart-item';
+			trGood.dataset.id = id;
+
+			trGood.innerHTML = `
+					<td>${name}</td>
+					<td>${price}</td>
+					<td><button class="cart-btn-minus">-</button></td>
+					<td>${count}</td>
+					<td><button class="cart-btn-plus">+</button></td>
+					<td>${price * count}</td>
+					<td><button class="cart-btn-delete">x</button></td>
+			`;
+			cartTableGoods.append(trGood)
+		});
+
+		const totalPrice = this.cartGoods.reduce((sum, item)=> {
+			return sum + item.price * item.count;
+		},0);
+		cardTableTotal.textContent = totalPrice + '$'
+
+	},
+
+	deleteGood(id){
+		this.cartGoods = this.cartGoods.filter(item => id !== item.id)
+		this.renderCart();
+		this.countQuantity();
+	},
+	minusGood(id){
+		for(const item of this.cartGoods) {
+				if(item.id === id) {
+					if(item.count <= 1) {
+						this.deleteGood(id)
+					} else {
+						item.count--;
+					}
+					break;
+				}
+			}
+		this.renderCart();
+	},
+	plusGood(id){
+		for(const item of this.cartGoods) {
+			if(item.id === id) {
+				item.count++;
+				break;
+			}
+		}
+		this.renderCart();
+		cart.countQuantity();
+	},
+	addCartGoods(id){
+		const goodItem = this.cartGoods.find(item => item.id === id);
+	if(goodItem) {
+		this.plusGood(id)
+	} else {
+		getGoods()
+			.then(data => data.find(item => item.id === id))
+			.then(({id, name, price}) => {
+				this.cartGoods.push({
+						id,
+						name,
+						price,
+						count: 1
+				});
+				this.countQuantity();
+			})
+		}
+	},
+	clearCart(){
+		this.cartGoods.length = 0;
+		this.countQuantity();
+		this.renderCart();
+	}
+}
+cartClear.addEventListener('click', cart.clearCart.bind(cart))
+
+// cart.cardAllClear();
+
+document.body.addEventListener('click', e => {
+	const addToCart = e.target.closest('.add-to-cart');
+
+	if(addToCart) {
+	cart.addCartGoods(addToCart.dataset.id)
+	}
+})
+
+cartTableGoods.addEventListener('click', e => {
+	e.preventDefault();
+	const target = e.target;
+	if(target.classList.contains('cart-btn-delete')){
+		const id = target.closest('.cart-item').dataset.id;
+		cart.deleteGood(id)
+	};
+
+	if(target.classList.contains('cart-btn-minus')) {
+		const id = target.closest('.cart-item').dataset.id;
+		cart.minusGood(id)
+	};
+
+	if(target.classList.contains('cart-btn-plus')) {
+		const id = target.closest('.cart-item').dataset.id;
+		cart.plusGood(id)
+	};
+})
 
 const openModal = () => {
+	cart.renderCart();
 	modalCart.classList.add('show');
 	return modal.style.display = 'flex'
 }
@@ -52,21 +189,6 @@ window.addEventListener('click', e => {
 
 
 		// Goods
-
-const viewAll = document.querySelectorAll('.view-all');
-const navigationLink = document.querySelectorAll('.navigation-link:not(.view-all)');
-const longGoodsList = document.querySelector('.long-goods-list');
-const showClothing = document.querySelectorAll('.show-clothing');
-const showAccessories = document.querySelectorAll('.show-accessories');
-
-
-const getGoods = async () => {
-	const result = await fetch('db/db.json');
-if(!result.ok) {
-	throw `Ошибка: ${result.status}`
-}
-return result.json();
-}
 
 const createCard = ({ label, name, id, price, img, description }) => {
 	const card = document.createElement('div');
@@ -106,14 +228,9 @@ viewAll.forEach(elem => {
 	elem.addEventListener('click', showAll)
 });
 
-
 const filterCards = (field, value) => {
 	getGoods()
-	.then(data => {
-			return data.filter( good => {
-				return good[field] === value;
-			});
-	})
+	.then(data => data.filter( good => good[field] === value))
 	.then(renderCards);
 };
 navigationLink.forEach(link => {
@@ -125,16 +242,15 @@ navigationLink.forEach(link => {
 	})
 });
 
-
-showClothing.forEach(i => {
-	i.addEventListener('click', e  => {
+showClothing.forEach(item => {
+		item.addEventListener('click', e => {
 		e.preventDefault();
 		filterCards('category', 'Clothing');
 	});
 });
 
-showAccessories.forEach(i => {
-	i.addEventListener('click', e  => {
+showAccessories.forEach(item => {
+		item.addEventListener('click', e => {
 		e.preventDefault();
 		filterCards('category', 'Accessories');
 	});

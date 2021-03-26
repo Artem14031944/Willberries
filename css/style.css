@@ -12,6 +12,11 @@ img {
     max-width: 100%;
     height: auto;
 }
+button, 
+button:active, 
+button:focus {
+    outline: none;
+}
 
 .header {
     padding: 15px 0;
@@ -429,6 +434,14 @@ button {
     display: block;
     margin-left: auto;
     height: 40px;
+}
+.cart-clear{
+    background-color: #A72828;
+    border-color: #A72828;
+    /* display: block; */
+    margin-left: auto;
+    height: 20px;
+    margin-top: 20px;
 }
 
 
